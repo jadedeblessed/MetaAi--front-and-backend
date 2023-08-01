@@ -83,7 +83,27 @@
         sh 'npm start '
       }
     }
-    
+   post { 
+        always {
+            echo "CleanWS needs to be added"
+            cleanWs()
+        }
+        aborted {
+            sh '''
+            	curl -X POST -H 'Content-type: application/json' --data '{"text":"The React Frontend Server looks down, please have a look"}' https://hooks.slack.com/services/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
+            '''
+          }
+        failure {
+          sh '''
+              	curl -X POST -H 'Content-type: application/json' --data '{"text":"The  React Frontend Server looks down, please have a look"}' https://hooks.slack.com/services/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
+             '''
+          }
+        unsuccessful {
+           sh '''
+              	curl -X POST -H 'Content-type: application/json' --data '{"text":"The  React Frontend Server looks down, please have a look"}' https://hooks.slack.com/services/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
+             '''
+          } 
+     
     
     
   }
