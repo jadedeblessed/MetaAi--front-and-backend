@@ -1,0 +1,90 @@
+ pipeline {
+    agent {
+      label 'react-frontenddev-node'
+    }
+
+  tools {
+    nodejs "node"
+  }
+  
+  stages {
+    stage('Check version') {
+      steps {
+        sh 'sudo apt update'
+        sh 'node --version'
+        sh 'npm --version'
+      }
+    }
+    
+    stage('Checkout') {
+      steps {
+        echo 'Cloning the latest application version'
+        checkout([$class: 'GitSCM',
+                  branches: [[name: '*/main']],
+                  doGenerateSubmoduleConfigurations: false,
+                  extensions: [],
+                  submoduleCfg: [],
+                  userRemoteConfigs: [[credentialsId: 'gitlab-meta-credentials',
+                                      url: 'https://gitlab.com/metabullai1/metabullai-web-frontend.git']]
+                 ])
+      }
+    }
+    
+    stage('Install Dependencies') {
+      steps {
+        sh 'npm install'
+      }
+    }
+     
+    stage('Enable Apache modules') {
+            steps {
+                sh 'sudo a2enmod proxy'
+                sh 'sudo a2enmod proxy_http'
+            }
+        }
+
+        stage('Configure Apache reverse proxy') {
+            steps {
+                sh 'sudo tee /etc/apache2/sites-available/pipeline.conf > /dev/null <<EOT\n' +
+                   '<VirtualHost *:80>\n' +
+                   '    ServerName 18.119.42.42\n' +
+                   '    ProxyRequests Off\n' +
+                   '    ProxyPass / http://localhost:3000/\n' +
+                   '    ProxyPassReverse / http://localhost:3000/\n' +
+                   '</VirtualHost>\n' +
+                   'EOT'
+            }
+        }
+
+        stage('Enable Apache site') {
+            steps {
+                sh 'sudo a2ensite pipeline.conf'
+            }
+        }
+
+        stage('Disable default Apache site') {
+            steps {
+                sh 'sudo a2dissite 000-default.conf'
+            }
+        }
+
+        stage('Restart Apache') {
+            steps {
+                sh 'sudo systemctl restart apache2'
+            }
+        }
+
+    
+    stage('Run') {
+      steps {
+        echo 'Start'
+        // Add any necessary steps for running your application here
+        // For example, you can use the 'npm start' command
+        sh 'npm start '
+      }
+    }
+    
+    
+    
+  }
+}
